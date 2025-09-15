@@ -1,8 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-
-use App\Helper\JWTToken;
 use App\Mail\OTPMail;
 use App\Models\User;
 use Exception;
@@ -39,9 +37,11 @@ class UserController extends Controller
 
 
 
-    function ProfilePage()
+    function ProfilePage(Request $request)
     {
-        return Inertia::render('ProfilePage');
+        $email=$request->header('email');
+        $user=User::where('email','=',$email)->first();
+        return Inertia::render('ProfilePage',['list'=>$user]);
     }
 
 
@@ -58,14 +58,13 @@ class UserController extends Controller
                 'mobile'=>$mobile,
                 'password'=>$password
             ]);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'User Registration Successfully'
-            ],200);
+            $data =['message'=>'Registration Successful','status'=>true,'error'=>''];
+            return  redirect()->route('RegistrationPage')->with($data);
         }
 
         catch (Exception $e) {
-            return response()->json(['status' => 'failed', 'message' => $e->getMessage()],200);
+            $data =['message'=>'Registration Fail','status'=>false,'error'=>$e->getMessage()];
+            return  redirect()->route('RegistrationPage')->with($data);
         }
 
     }
@@ -73,80 +72,67 @@ class UserController extends Controller
 
     function UserLogin(Request $request){
 
-        $count=User::where('email','=',$request->input('email'))
-            ->where('password','=',$request->input('password'))
-            ->select('id')->first();
+        $result= User::where($request->input())->count();
+        $id=User::where($request->input())->select('id')->first();
 
+        if($result==1){
 
-        if($count!==null){
-            // User Login-> JWT Token Issue
-            $token=JWTToken::CreateToken($request->input('email'),$count->id);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'User Login Successful',
-                'token'=>$token
-            ],200)->cookie('token',$token,time()+60*24*30);
+            $email=$request->input('email');
+            $request->session()->put('email',$email);
+            $request->session()->put('user_id',$id['id']);
+
+            $data =['message'=>'Login Successful','status'=>true,'error'=>''];
+            return  redirect()->route('DashboardPage')->with($data);
         }
         else{
-            return response()->json([
-                'status' => 'failed',
-                'message' => 'unauthorized'
-            ],200);
-
+            $data =['message'=>'Login Fail','status'=>false];
+            return  redirect()->route('LoginPage')->with($data);
         }
 
 
     }
 
 
-    function UserLogout(){
-        return redirect('/')->cookie('token','',-1);
+    function UserLogout(Request $request){
+        $request->session()->flush();
+        return redirect()->route('LoginPage');
     }
 
-    function SendOTPCode(Request $request){
 
+
+    function SendOTPCode(Request $request){
         $email=$request->input('email');
         $otp=rand(1000,9999);
         $count=User::where('email','=',$email)->count();
         if($count==1){
             Mail::to($email)->send(new OTPMail($otp));
             User::where('email','=',$email)->update(['otp'=>$otp]);
-            return response()->json([
-                'status' => 'success',
-                'message' => "4 Digit {$otp} Code has been send to your email !"
-            ],200);
+            $data =['message'=>'Request Successful','status'=>true,'error'=>''];
+            $request->session()->put('email',$email);
+            return  redirect()->route('SendOtpPage')->with($data);
         }
         else{
-            return response()->json([
-                'status' => 'failed',
-                'message' => 'unauthorized'
-            ]);
+            $data =['message'=>'Request Successful','status'=>false,'error'=>''];
+            return  redirect()->route('SendOtpPage')->with($data);
         }
-
     }
 
 
     function VerifyOTP(Request $request){
-        $email=$request->input('email');
+        $email=$request->session()->get('email','default');
         $otp=$request->input('otp');
         $count=User::where('email','=',$email)
             ->where('otp','=',$otp)->count();
 
         if($count==1){
             User::where('email','=',$email)->update(['otp'=>'0']);
-            $token=JWTToken::CreateTokenForSetPassword($request->input('email'));
-            return response()->json([
-                'status' => 'success',
-                'message' => 'OTP Verification Successful',
-                'token'=>$token
-            ],200)->cookie('token',$token,60*24*30);
-
+            $request->session()->put('otp_verify','yes');
+            $data =['message'=>'Request Successful','status'=>true,'error'=>''];
+            return  redirect()->route('VerifyOtpPage')->with($data);
         }
         else{
-            return response()->json([
-                'status' => 'failed',
-                'message' => 'unauthorized'
-            ],200);
+            $data =['message'=>'Request Fail','status'=>false,'error'=>''];
+            return  redirect()->route('VerifyOtpPage')->with($data);
         }
     }
 
@@ -154,39 +140,38 @@ class UserController extends Controller
     function ResetPassword(Request $request){
 
         try{
-            $email=$request->header('email');
+            $email=$request->session()->get('email','default');
             $password=$request->input('password');
-            User::where('email','=',$email)->update(['password'=>$password]);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Request Successful',
-            ],200);
+            $otp_verify=$request->session()->get('otp_verify','default');
 
-        }catch (Exception $exception){
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Something Went Wrong',
-            ],200);
+            if($otp_verify==="yes"){
+                User::where('email','=',$email)->update(['password'=>$password]);
+                $data =['message'=>'Request Successful','status'=>true];
+                $request->session()->flush();
+                return  redirect()->route('ResetPasswordPage')->with($data);
+            }
+            else{
+                $data =['message'=>'Request Fail','status'=>false];
+                return  redirect()->route('ResetPasswordPage')->with($data);
+            }
+
+
+
+        }catch (Exception $e){
+            $data =['message'=>'Request Fail','status'=>false,'error'=>$e->getMessage()];
+            return  redirect()->route('ResetPasswordPage')->with($data);
         }
 
     }
 
 
-    function UserProfile(Request $request){
-        $email=$request->header('email');
-        $user=User::where('email','=',$email)->first();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Request Successful',
-            'data' => $user
-        ],200);
-    }
+
 
 
 
     function UpdateProfile(Request $request){
         try{
-            $email=$request->header('email');
+            $email=$request->input('email');
             $name=$request->input('name');
             $mobile=$request->input('mobile');
             $password=$request->input('password');
@@ -196,16 +181,11 @@ class UserController extends Controller
                 'mobile'=>$mobile,
                 'password'=>$password
             ]);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Request Successful',
-            ],200);
-
-        }catch (Exception $exception){
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Something Went Wrong',
-            ],200);
+            $data =['message'=>'Request Success','status'=>true];
+            return  redirect()->route('ProfilePage')->with($data);
+        }catch (Exception $e){
+            $data =['message'=>'Request Success','status'=>true,'error'=>$e->getMessage()];
+            return  redirect()->route('ProfilePage')->with($data);
         }
     }
 }

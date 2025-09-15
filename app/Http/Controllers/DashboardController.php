@@ -13,17 +13,8 @@ class DashboardController extends Controller
 {
 
 
-    function DashboardPage()
+    function DashboardPage(Request $request)
     {
-        return Inertia::render('DashboardPage');
-    }
-
-
-
-
-
-
-    function Summary(Request $request){
         $user_id=$request->header('id');
         $product= Product::where('user_id',$user_id)->count();
         $Category= Category::where('user_id',$user_id)->count();
@@ -32,7 +23,7 @@ class DashboardController extends Controller
         $total=  Invoice::where('user_id',$user_id)->sum('total');
         $vat= Invoice::where('user_id',$user_id)->sum('vat');
         $payable =Invoice::where('user_id',$user_id)->sum('payable');
-        return[
+        $data=[
             'product'=> $product,
             'category'=> $Category,
             'customer'=> $Customer,
@@ -41,5 +32,9 @@ class DashboardController extends Controller
             'vat'=> round($vat,2),
             'payable'=> round($payable,2)
         ];
+
+        return Inertia::render('DashboardPage',['list'=>$data]);
     }
+
+
 }
