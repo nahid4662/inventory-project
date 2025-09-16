@@ -10,9 +10,11 @@ class ProductController extends Controller
 {
 
 
-    function ProductPage()
+    function ProductPage(Request $request)
     {
-        return Inertia::render('ProductPage');
+        $user_id=$request->header('id');
+        $list=Product::where('user_id',$user_id)->get();
+        return Inertia::render('ProductPage',['list'=>$list]);
     }
 
 

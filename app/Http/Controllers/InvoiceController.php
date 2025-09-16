@@ -19,9 +19,11 @@ class InvoiceController extends Controller
         return Inertia::render('SalePage');
     }
 
-    function InvoiceListPage()
+    function InvoiceListPage(Request $request)
     {
-        return Inertia::render('InvoiceListPage');
+        $user_id=$request->header('id');
+        $list=Invoice::where('user_id',$user_id)->with('customer')->get();
+        return Inertia::render('InvoiceListPage',['list'=>$list]);
     }
 
 

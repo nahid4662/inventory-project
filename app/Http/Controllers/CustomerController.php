@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -10,9 +11,11 @@ class CustomerController extends Controller
 {
 
 
-    function CustomerPage()
+    function CustomerPage(Request $request)
     {
-        return Inertia::render('CustomerPage');
+        $user_id=$request->header('id');
+        $list= Customer::where('user_id',$user_id)->get();
+        return Inertia::render('CustomerPage',['list'=>$list]);
     }
 
 
