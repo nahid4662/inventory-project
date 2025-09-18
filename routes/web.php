@@ -31,7 +31,9 @@ Route::get('/CategorySavePage', [CategoryController::class, 'CategorySavePage'])
 
 
 Route::get('/CustomerPage', [CustomerController::class, 'CustomerPage'])->name('CustomerPage')->middleware([SessionAuthenticate::class]);
+Route::get('/CustomerSavePage', [CustomerController::class, 'CustomerSavePage'])->name('CustomerSavePage')->middleware([SessionAuthenticate::class]);
 Route::get('/ProductPage', [ProductController::class, 'ProductPage'])->name('ProductPage')->middleware([SessionAuthenticate::class]);
+Route::get('/ProductSavePage', [ProductController::class, 'ProductSavePage'])->name('ProductSavePage')->middleware([SessionAuthenticate::class]);
 Route::get('/SalePage', [InvoiceController::class, 'SalePage'])->name('SalePage')->middleware([SessionAuthenticate::class]);
 Route::get('/InvoiceListPage', [InvoiceController::class, 'InvoiceListPage'])->name('InvoiceListPage')->middleware([SessionAuthenticate::class]);
 Route::get('/InvoiceListPage', [InvoiceController::class, 'InvoiceListPage'])->name('InvoiceListPage')->middleware([SessionAuthenticate::class]);
@@ -67,7 +69,7 @@ Route::post("/category-by-id",[CategoryController::class,'CategoryByID'])->middl
 // Customer API
 Route::post("/create-customer",[CustomerController::class,'CustomerCreate'])->middleware([SessionAuthenticate::class]);
 Route::get("/list-customer",[CustomerController::class,'CustomerList'])->middleware([SessionAuthenticate::class]);
-Route::post("/delete-customer",[CustomerController::class,'CustomerDelete'])->middleware([SessionAuthenticate::class]);
+Route::get("/delete-customer/{id}",[CustomerController::class,'CustomerDelete'])->middleware([SessionAuthenticate::class]);
 Route::post("/update-customer",[CustomerController::class,'CustomerUpdate'])->middleware([SessionAuthenticate::class]);
 Route::post("/customer-by-id",[CustomerController::class,'CustomerByID'])->middleware([SessionAuthenticate::class]);
 
@@ -75,7 +77,7 @@ Route::post("/customer-by-id",[CustomerController::class,'CustomerByID'])->middl
 // Product API
 
 Route::post("/create-product",[ProductController::class,'CreateProduct'])->middleware([SessionAuthenticate::class]);
-Route::post("/delete-product",[ProductController::class,'DeleteProduct'])->middleware([SessionAuthenticate::class]);
+Route::get("/delete-product/{id}",[ProductController::class,'DeleteProduct'])->middleware([SessionAuthenticate::class]);
 Route::post("/update-product",[ProductController::class,'UpdateProduct'])->middleware([SessionAuthenticate::class]);
 Route::get("/list-product",[ProductController::class,'ProductList'])->middleware([SessionAuthenticate::class]);
 Route::post("/product-by-id",[ProductController::class,'ProductByID'])->middleware([SessionAuthenticate::class]);
