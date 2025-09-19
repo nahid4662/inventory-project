@@ -36,8 +36,8 @@ Route::get('/ProductPage', [ProductController::class, 'ProductPage'])->name('Pro
 Route::get('/ProductSavePage', [ProductController::class, 'ProductSavePage'])->name('ProductSavePage')->middleware([SessionAuthenticate::class]);
 Route::get('/SalePage', [InvoiceController::class, 'SalePage'])->name('SalePage')->middleware([SessionAuthenticate::class]);
 Route::get('/InvoiceListPage', [InvoiceController::class, 'InvoiceListPage'])->name('InvoiceListPage')->middleware([SessionAuthenticate::class]);
-Route::get('/InvoiceListPage', [InvoiceController::class, 'InvoiceListPage'])->name('InvoiceListPage')->middleware([SessionAuthenticate::class]);
 Route::get('/ProfilePage', [UserController::class, 'ProfilePage'])->name('ProfilePage')->middleware([SessionAuthenticate::class]);
+Route::get('/InvoiceDetailsPage', [InvoiceController::class, 'InvoiceDetailsPage'])->name('InvoiceDetailsPage')->middleware([SessionAuthenticate::class]);
 
 
 
@@ -88,7 +88,7 @@ Route::post("/product-by-id",[ProductController::class,'ProductByID'])->middlewa
 Route::post("/invoice-create",[InvoiceController::class,'invoiceCreate'])->middleware([SessionAuthenticate::class]);
 Route::get("/invoice-select",[InvoiceController::class,'invoiceSelect'])->middleware([SessionAuthenticate::class]);
 Route::post("/invoice-details",[InvoiceController::class,'InvoiceDetails'])->middleware([SessionAuthenticate::class]);
-Route::post("/invoice-delete",[InvoiceController::class,'invoiceDelete'])->middleware([SessionAuthenticate::class]);
+Route::get("/invoice-delete/{id}",[InvoiceController::class,'invoiceDelete'])->middleware([SessionAuthenticate::class]);
 
 
 

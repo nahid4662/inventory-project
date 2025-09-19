@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceProduct;
+use App\Models\Product;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,9 +15,15 @@ class InvoiceController extends Controller
 {
 
 
-    function SalePage()
+   function SalePage(Request $request)
     {
-        return Inertia::render('SalePage');
+        $user_id = $request->header('id');
+        $customers = Customer::where('user_id', $user_id)->get();
+        $products = Product::where('user_id', $user_id)->get();
+        return Inertia::render('SalePage', [
+            'customers' => $customers,
+            'products' => $products
+        ]);
     }
 
     function InvoiceListPage(Request $request)
@@ -27,53 +34,69 @@ class InvoiceController extends Controller
     }
 
 
+    function InvoiceDetailsPage(Request $request)
+    {
+        $user_id=$request->header('id');
+        $customerDetails=Customer::where('user_id',$user_id)->first();
+        $invoiceTotal=Invoice::where('user_id',$user_id)->first();
+        $invoiceProduct=InvoiceProduct::where('invoice_id',$request->query('id'))
+            ->where('user_id',$user_id)->with('product')
+            ->get();
+        return Inertia::render('InvoiceDetailsPage',[
+            'customer'=>$customerDetails,
+            'invoice'=>$invoiceTotal,
+            'product'=>$invoiceProduct,
+        ]);
+    }
 
-
-    function invoiceCreate(Request $request){
+    public function invoiceCreate(Request $request)
+    {
         DB::beginTransaction();
         try {
+            $user_id = $request->header('id');
+            $total = $request->input('total');
+            $discount = $request->input('discount');
+            $vat = $request->input('vat');
+            $payable = $request->input('payable');
+            $customer_id = $request->input('customer_id');
+            $products = $request->input('products');
 
-            $user_id=$request->header('id');
-            $total=$request->input('total');
-            $discount=$request->input('discount');
-            $vat=$request->input('vat');
-            $payable=$request->input('payable');
-            $customer_id=$request->input('customer_id');
+            // Validate main invoice fields
+            if (!$customer_id || !is_array($products) || count($products) == 0) {
+                DB::rollBack();
+                $data = ['message' => 'Invalid data. Please select customer and at least one product.', 'status' => false];
+                return redirect()->route('InvoiceListPage')->with($data);
+            }
 
-            $invoice= Invoice::create([
-                'total'=>$total,
-                'discount'=>$discount,
-                'vat'=>$vat,
-                'payable'=>$payable,
-                'user_id'=>$user_id,
-                'customer_id'=>$customer_id,
+            $invoice = Invoice::create([
+                'total' => $total,
+                'discount' => $discount,
+                'vat' => $vat,
+                'payable' => $payable,
+                'user_id' => $user_id,
+                'customer_id' => $customer_id,
             ]);
 
-
-            $invoiceID=$invoice->id;
-            $products= $request->input('products');
-
+            $invoiceID = $invoice->id;
             foreach ($products as $EachProduct) {
+                // SaleForm uses keys: product_id, unit, price
                 InvoiceProduct::create([
                     'invoice_id' => $invoiceID,
-                    'user_id'=>$user_id,
+                    'user_id' => $user_id,
                     'product_id' => $EachProduct['product_id'],
-                    'qty' =>  $EachProduct['qty'],
-                    'sale_price'=>  $EachProduct['sale_price'],
+                    'qty' => $EachProduct['unit'],
+                    'sale_price' => $EachProduct['price'],
                 ]);
             }
 
-
             DB::commit();
-            return 1;
-
-        }
-        catch (Exception $e) {
+            $data = ['message' => 'Invoice Created Successfully', 'status' => true];
+            return redirect()->route('InvoiceListPage')->with($data);
+        } catch (Exception $e) {
             DB::rollBack();
-            return 0;
+            $data = ['message' => 'Invoice creation failed: ' . $e->getMessage(), 'status' => false];
+            return redirect()->route('InvoiceListPage')->with($data);
         }
-
-
     }
 
 
@@ -89,11 +112,11 @@ class InvoiceController extends Controller
         $invoiceProduct=InvoiceProduct::where('invoice_id',$request->input('inv_id'))
             ->where('user_id',$user_id)->with('product')
             ->get();
-        return array(
-            'customer'=>$customerDetails,
-            'invoice'=>$invoiceTotal,
-            'product'=>$invoiceProduct,
-        );
+        return redirect()->route('InvoiceListPage')->with([
+            'customer' => $customerDetails,
+            'invoice' => $invoiceTotal,
+            'product' => $invoiceProduct,
+        ]);
 
     }
 
@@ -101,20 +124,21 @@ class InvoiceController extends Controller
     function invoiceDelete(Request $request){
         DB::beginTransaction();
         try {
-            $user_id=$request->header('id');
-            InvoiceProduct::where('invoice_id',$request->input('inv_id'))
-                ->where('user_id',$user_id)
+            $user_id = $request->header('id');
+            $invoice_id = $request->route('id');
+
+            InvoiceProduct::where('invoice_id', $invoice_id)
+                ->where('user_id', $user_id)
                 ->delete();
 
-            Invoice::where('id',$request->input('inv_id'))->delete();
+            Invoice::where('id', $invoice_id)->delete();
 
             DB::commit();
-            return 1;
+            return redirect()->route('InvoiceListPage')->with(['message'=>'Delete Invoice Successful','status'=>true]);
         }
         catch (Exception $e){
             DB::rollBack();
-            return 0;
+            return redirect()->route('InvoiceListPage')->with(['message'=>'Delete Invoice Fail','status'=>false,'error'=>$e->getMessage()]);
         }
-
     }
 }
